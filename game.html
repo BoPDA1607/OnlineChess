@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Chess Game</title>
+        <link rel="stylesheet" href="./style.css">
+    </head>
+
+    <body class="home-screen">
+        <div id="waiting" style="display: none;">Waiting for opponent to connect...</div>
+        <div id="container" style="display: none;">
+            
+        </div>
+        <div id="transparent-block"></div>
+        <div id="game-controls" style="display: none;">
+            <div class="control-buttons">
+                <button class="control-btn surrender" id="surrender-btn">Surrender</button>
+                <button class="control-btn draw" id="draw-btn">Request Draw</button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chatArea">
+                    <div class="chat-title">Chat here!</div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="chat-input" placeholder="Type a message..." onen>
+                    <button class="send-btn" id="send-message-btn">Send</button>
+                </div>
+            </div>
+        </div>
+        <div id="dropdown-container"></div>
+        <script src="/libs/konva-9.3.16/libs/konva.js"></script>
+        <script type="module">
+            var url = new URLSearchParams(window.location.search).get('code');
+            var codeGame = url.split('/')[0];
+            var color = url.split('/')[1];
+            var type = url.split('/')[2];
+
+            const socket = new WebSocket('ws:/localhost:8080');
+
+            socket.onopen = () => {
+                console.log('Connected to WebSocket server');
+
+                // Join the game
+                if (type === 'create') {
+                    socket.send(JSON.stringify({ type: 'create_game', codeGame: codeGame }));
+                } else if (type === 'join') {
+                    socket.send(JSON.stringify({ type: 'join_game', codeGame: codeGame }));
+                }
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Message received from server:', data);
+                let gameInstance;
+
+                if (data.type === 'waiting_for_opponent') {
+                    document.getElementById('waiting').style.display = 'block';
+                    console.log('Waiting for opponent...');
+                } else if (data.type === 'opponent_connected') {
+                    document.getElementById('waiting').style.display = 'none';
+                    document.getElementById('container').style.display = 'flex';
+
+                    document.body.dataset.codeGame = codeGame;
+                    document.body.dataset.color = color;
+
+                    // Initialize the game only after both players are connected
+                    import('./app.js').then(module => {
+                        module.startGame(codeGame, color, socket);
+                        document.getElementById('game-controls').style.display = 'block';
+                    }).catch(error => {
+                        console.error('Failed to load app.js:', error);
+                    });
+                } else if (data.type === 'game_already_exists') {
+                    alert('Game already exists');
+                    window.location.href = '/';
+                } else if (data.type === 'game_full') {
+                    alert('Game is full');
+                    window.location.href = '/';
+                } else if (data.type === 'game_not_created') {
+                    alert('Game not created');
+                    window.location.href = '/';
+                } 
+            };
+
+            socket.onerror = (error) => {
+                console.error(`WebSocket error: ${error}`);
+            };
+
+            document.getElementById('surrender-btn').addEventListener('click', function () {
+                const userConfirmed = confirm("Are you sure you want to surrender?");
+                if (userConfirmed) {
+                    alert('You lost the game');
+                    socket.send(JSON.stringify({ type: 'surrender', codeGame }));
+                    window.location.href = '/';
+                }
+            });
+
+            document.getElementById('draw-btn').addEventListener('click', function () {
+                const userConfirmed = confirm("Are you sure you want to make a draw?");
+                if (userConfirmed) {
+                    socket.send(JSON.stringify({ type: 'draw_request', codeGame }));
+                }
+            });
+
+            document.getElementById('chat-input').addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') { // Check if the Enter key was pressed
+                    SendMessage();
+                }
+            });
+
+            document.getElementById('send-message-btn').addEventListener('click', SendMessage);
+
+            function SendMessage() {
+                const message = document.getElementById('chat-input').value;
+                
+                if (message.trim() && message.length <= 100 && message.length >= 1 && message.trim() != '') {
+                    socket.send(JSON.stringify({ type: 'chat_message', codeGame, message }));
+                    document.getElementById('chat-input').value = '';
+                    const chatMessages = document.getElementById('chatArea');
+                    chatMessages.innerHTML += `
+                        <div class="message my-message">
+                            ${message}
+                        </div>
+                    `;
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }
+        </script>
+    </body>
+</html>

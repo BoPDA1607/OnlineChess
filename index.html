@@ -1,0 +1,55 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="./style.css">
+    </head>
+    <body class="home-screen">
+        <div class="home-container">
+            <h1>Online Chess Game</h1>
+            <input type="text" id="gameCode" placeholder="Enter game code" />
+            <div class="buttons">
+              <button onclick="createGame()">Create Game</button>
+              <button onclick="joinGame()">Join Game</button>
+            </div>
+        </div>
+
+        <script>
+            function createGame() {
+                var codeGame = document.getElementById('gameCode').value
+                var color = 0
+                if(codeGame == "") {
+                    alert("Please enter a game code");
+                    window.location.href = '/';
+                } else if(codeGame.length < 3 || codeGame.length > 7) {
+                    alert("Game code length must between 3 and 6 characters");
+                    window.location.href = '/';
+                } else if(!/^[a-zA-Z0-9]*$/.test(codeGame)) {
+                    alert("Game code must be alphanumeric");
+                    window.location.href = '/';
+                } else {
+                    window.location.href = '/game.html?code=' + codeGame + '/' + color + '/create';
+                }
+            }
+            function joinGame() {
+                var codeGame = document.getElementById('gameCode').value
+                var color = 1
+                if(codeGame == "") {
+                    alert("Please enter a game code");
+                    window.location.href = '/';
+                } else if(codeGame.length < 3 && codeGame.length > 7) {
+                    alert("Game code length must between 3 and 6 characters");
+                    window.location.href = '/';
+                } else if(!/^[a-zA-Z0-9]*$/.test(codeGame)) {
+                    alert("Game code must be alphanumeric");
+                    window.location.href = '/';
+                } else {
+                    window.location.href = '/game.html?code=' + codeGame + '/' + color + '/join';
+                }
+            }
+
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('error') == 'invalidCode') {
+                alert('Invalid game code');
+            }
+        </script>
+    </body>
+</html>
